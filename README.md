@@ -1,8 +1,22 @@
 # AntTrail · 蚁径
 
-**一蚁探路，群蚁成径。** 一个 Agent 把验证过的方法写回项目 Skill，下一个 Agent 从同一个项目接手。每轮回答把采用的 Skill 做成可点击的短链接，你可以随时打开原文。
+**一蚁探路，群蚁成径。** 在获准维护的项目里，Agent 会**为反复出现的任务生成 Skill**，也会**用新证据更新已有 Skill**。下一个 Agent 能从同一项目读到这份经验。每轮回答都用可点击的短链接展示所用 Skill，你可以打开原文。
 
 由 [zhaotingding](https://github.com/zhaotingding) 发起并维护。欢迎在 [Issues](https://github.com/zhaotingding/anttrail/issues) 交流工作方式、提交案例或讨论新的客户端。原创规则和文档采用 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，原创可执行代码采用 [MIT](LICENSES/MIT.txt)。
+
+## 项目 Skill 如何自生成、自更新
+
+[全局约定](global/AGENTS.md#4-知识维护)规定**何时触发**，[知识维护 Skill](skills/project-knowledge-maintenance/SKILL.md)告诉 Agent **该写到哪里**。在获准执行的项目任务中，Agent 发现可复用的已验证方法、明确的长期约定，或证实旧知识已经失效，就主动核对项目索引、已有 Skill 和原始证据。用户无需为每次沉淀单独下达“创建 Skill”的命令。
+
+| 现场判断 | Agent 的动作 | 下次接手能看到什么 |
+| --- | --- | --- |
+| **自生成**。这类任务会独立触发，已有 Skill 都承接不了 | 创建 `.agents/skills/<name>/SKILL.md`，用 `name` 和 `description` 声明名称与触发条件，正文写流程、适用边界和证据入口。项目根 `AGENTS.md` 增加一行索引 | 团队多了一项可以按任务选用的技能 |
+| **自更新**。新证据补充或纠正了已有 Skill | 读最新版本，把变化合并进原条款或其 `references/`。触发范围或路径变了才同步调整索引 | 同一项技能给出更新后的做法，能够追溯变更依据 |
+| 已有等价知识，或只是一次临时现象 | 等价条目直接复用。单次运行状态留在任务记录，尚无依据的解释保留为待验证 | 技能目录仍按任务组织，不随对话轮数增长 |
+
+项目 Skill 正文以 3000 字符为上限（不含 YAML 元数据）。预计超限时先合并重复条款，再把条件性细节移入参考。多人维护同一文件时先明确编辑责任，写入前核对最新版本。
+
+**项目可以主动写回，全局由使用者批准。** 只读分析阶段可以提出候选条目。进入已批准的项目执行阶段后，Agent 可主动维护项目知识。发现跨项目可复用的经验或通用 Skill 的问题时，Agent 可以提议更新个人通用 Skill 或全局约定，说明目标文件、具体改法、依据、影响和验证方式，取得明确授权后才写入。
 
 ## 先看一轮回答
 
@@ -10,7 +24,7 @@
 >
 > `dew` 是最快的已完成任务，报表用时为 `0.000 s`。`fern` 为 `1.250 s`。
 
-点开上面的名称就能看到这项判断依据什么。这里使用仓库相对链接演示显示效果。在本地会话中，Agent 用当前客户端能打开的实际文件路径。下一轮如果继续沿用有效正文，链接仍保留，状态写“沿用已读”。
+这段回答使用[仓库自带的原始样本](examples/demo-project/runs.csv)。点开上面的名称就能查看判断依据。这里使用仓库相对链接演示显示效果。在本地会话中，Agent 用当前客户端能打开的实际文件路径。下一轮如果继续沿用有效正文，链接仍保留，状态写“沿用已读”。
 
 | 状态 | 读者能据此知道什么 |
 | --- | --- |
@@ -23,25 +37,42 @@
 
 ## 用两个客户端接力
 
-首次可用 `git clone https://github.com/zhaotingding/anttrail.git` 取得本仓库。从检出根运行以下 PowerShell。它将含隐藏技能目录的示例复制到新的临时工作区，使用 Python 3 标准库。两个客户端都打开 **同一个示例工作区**。
+**从零体验。** 首次可用 `git clone https://github.com/zhaotingding/anttrail.git` 取得本仓库。按[客户端指南](#接入你的客户端)接入全局约定，安装 `project-knowledge-maintenance` 和 `code-development`，维护项目索引时会用到后者的协作参考。从仓库根运行下面的 PowerShell。这里只复制程序、虚构数据和许可，工作副本起初没有项目 Skill 或索引。若想先看一份成形的 Skill，可打开[仓库自带的示例项目](examples/demo-project/)作对照。
 
 ```powershell
 $anttrail = (Resolve-Path -LiteralPath '.').Path
+$sample = Join-Path $anttrail 'examples/demo-project'
 $demo = Join-Path ([IO.Path]::GetTempPath()) ('anttrail-demo-' + [guid]::NewGuid().ToString('N').Substring(0,8))
-Copy-Item -LiteralPath './examples/demo-project' -Destination $demo -Recurse -Force
+[void](New-Item -ItemType Directory -Path $demo)
+foreach ($file in 'report.py','runs.csv','LICENSE') {
+    Copy-Item -LiteralPath (Join-Path $sample $file) -Destination $demo
+}
 Set-Location -LiteralPath $demo
 $demo
 python -B -X utf8 report.py
 ```
 
-1. 在第一个客户端打开 `$demo`。用 WorkBuddy 时，先按其[项目入口说明](clients/workbuddy.md)把这个副本中的 Skill 接入当前工作区。给 Agent 一个有明确写入范围的请求：
-   > 请直接用项目的小报程序核实，已完成但用时为零的任务在结果里怎么处理。把经验证、值得复用的结论记在本项目恰当的位置，方便别人接手。
-2. 打开临时副本中的 `.agents/skills/anttrail-run-summary/references/fields.md`。原版记录了字段、状态和单位，验证后的新条目应说明零用时样本的处理，指出可复核的数据和命令。下次遇到相同事实时复用已有条目。这个已获准的本地更新就是“自学习”。
-3. 在另一个客户端用**新会话**打开同一份副本，只问：
-   > 看一下这个项目的小报，哪项已完成任务最快？
-4. 点开第二位 Agent 显示的项目 Skill 和字段约定，核对它读取的是第一位刚更新的文件。用 `python report.py` 对照答案。跨机器协作时，由项目负责人按权限把这次知识更新提交到团队共享的分支，接手方取得同一版本再继续。
+**第一轮 · 看 Skill 生成。** 在第一个客户端打开 `$demo`，给它一项会反复用到的业务任务，并授权在本项目里记录结果。
 
-复制好示例后即可先体验项目级接力。跨项目采用完整工作约定时，再按下面的入口安装。
+> 以后每周由不同同事复核这份小报。请直接运行样例，核实哪些任务会入选、毫秒怎样换算成展示值。把可复核的做法留在本项目，方便下周接手。
+
+查看新出现的 `.agents/skills/` 与根 `AGENTS.md`。索引应能点到实际生成的 Skill，其描述应说清何时使用，正文或参考应能定位验证程序和样例。名称由 Agent 按任务确定。如果只收到口头总结，先核对客户端是否读到维护 Skill、是否已获得本次项目写入权限。
+
+**第二轮 · 看同一项 Skill 更新。** 在刚才的 PowerShell 中给临时副本添加一条并列样本，运行一次即可。
+
+```powershell
+Add-Content -LiteralPath (Join-Path $demo 'runs.csv') -Value 'ash,done,0' -Encoding ascii
+```
+
+> 团队以后回答“谁最快”时，要把全部并列任务按任务名升序列出。请用新样例核实，并把这条约定留给后续同事。本次可直接更新项目知识。
+
+打开第一轮生成的 Skill 或其参考，查看新增的并列口径和依据。一次 Codex 隔离实测中，项目 Skill 数量为 **0 → 1 → 1**。第一轮生成 `weekly-report-review`，第二轮更新它的正文和索引。程序仍按输入顺序列出 `dew` 再列 `ash`，回答时的排序来自团队新约定。
+
+**第三轮 · 换一个 Agent 接手。** 在另一客户端用新会话打开**同一个工作副本**。若需为 [WorkBuddy 建立项目入口](clients/workbuddy.md)，用第一轮索引里的实际技能目录替换指南中的样例目录名。跨机器时，先按项目授权提交并取得同一版本。让新会话回答这个业务问题。
+
+> 这次小报里最快的已完成任务是哪些？
+
+在上述实测中，独立的新会话读取了更新后的项目 Skill，按 `ash`、`dew` 的顺序列出两项，均为 `0.000 s`。在你的客户端试用时，点开回答里的 Skill 来源，核对它指向刚更新的项目知识。这样既能检查结论，也能看见经验从哪里传到了下一位 Agent。
 
 ## 接入你的客户端
 
@@ -64,12 +95,6 @@ python -B -X utf8 report.py
 | [server-cluster](skills/server-cluster/SKILL.md) | SSH 接入、主机身份、磁盘、解释器与工作区定位 | “根据这段脱敏的错误定位连接失败在哪一步。” |
 | [server-training](skills/server-training/SKILL.md) | 文献驱动的方法设计、对照、训练运行与方向判断 | “结合现有负结果，找两个能区分下一步方向的实验。” |
 | [project-knowledge-maintenance](skills/project-knowledge-maintenance/SKILL.md) | 沉淀已验证项目经验、整理索引与受控的跨项目推广 | “把这次验证过的恢复方法补进现有项目 Skill。” |
-
-## 谁能更新什么
-
-- **项目经验**留在项目的 `.agents/skills/`，根 `AGENTS.md` 放稳定约定和简短索引。资料随 Git 交接。每轮按任务读需要的正文与参考。
-- **跨项目经验**先成为可审核的提议。列出目标文件、具体改法、依据、影响和验证方式，取得维护者对该方案的明确授权再写入。各客户端原有权限仍生效。
-- **多人一起改**时，明确同一文件的编辑责任，写入前读取最新版本。一次提交围绕一个目的。保留有关的已验证事实和用户修改，合并重复条目。客户端之间通过文件与版本交接。
 
 接入新客户端时，在 `clients/` 记录它的规则与技能入口、个人与项目作用域，以及需要的宿主专属设置。在同一示例上分别验证发现、实际读取、写回和新会话接手，再补兼容表。贡献者可通过 [Issues](https://github.com/zhaotingding/anttrail/issues) 附客户端版本、复现步骤和脱敏后的观察结果。
 
