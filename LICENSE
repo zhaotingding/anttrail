@@ -1,0 +1,23 @@
+AntTrail（蚁径）— Public license notice
+
+Copyright (c) 2026 zhaotingding
+
+Original rules, skill instructions, guides, templates, and accompanying
+documentation in this repository are licensed under Creative Commons
+Attribution 4.0 International (SPDX: CC-BY-4.0).
+Full terms: LICENSES/CC-BY-4.0.txt
+https://creativecommons.org/licenses/by/4.0/
+
+Original executable code (including Python, JavaScript and PowerShell
+scripts) and the synthetic demonstration fixture runs.csv are licensed
+under the MIT License (SPDX: MIT).
+Full terms: LICENSES/MIT.txt
+
+These grants apply to the respective materials. Upstream works reached
+through external references are governed by their own licenses.
+
+Suggested attribution for the original documentation:
+AntTrail by zhaotingding — https://github.com/zhaotingding/anttrail
+CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+If sharing an adaptation, indicate that you modified it.
+Contact: https://github.com/zhaotingding/anttrail/issues

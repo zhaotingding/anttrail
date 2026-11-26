@@ -1,0 +1,9 @@
+# 本机环境与临时验证产物
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+.hosts.local.md
+hosts.local.md
